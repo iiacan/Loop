@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Loop</title>
+<meta name="description" content="Loop — a personal tracker for open loops.">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#12141B">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Loop">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#12141B; --card:#1A1E29; --card-2:#212637;
+    --paper:#EDEAE1; --muted:#8B8FA3;
+    --amber:#E3A857; --violet:#8C93D6; --clay:#C97B63; --rose:#D68FA0; --mint:#6FBF9E;
+    --line:rgba(237,234,225,0.10);
+    --display:'Space Grotesk',system-ui,sans-serif;
+    --body:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+    --mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+    --glow:var(--amber);
+    color-scheme:dark;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:#0A0B10;}
+  body{font-family:var(--body); color:var(--paper); min-height:100vh; min-height:100dvh;
+       display:flex; justify-content:center; padding:24px 12px; -webkit-text-size-adjust:100%;}
+  button,input,select,textarea{font:inherit; color:inherit;}
+  button{cursor:pointer;}
+  :focus-visible{outline:2px solid var(--paper); outline-offset:2px;}
+  [hidden]{display:none !important;}
+
+  .app{width:100%; max-width:460px; background:var(--ink); border-radius:34px; border:1px solid rgba(255,255,255,0.06);
+       box-shadow:0 40px 80px -30px rgba(0,0,0,0.7); padding:22px 20px 0; position:relative; overflow:hidden;
+       display:flex; flex-direction:column; align-self:flex-start; min-height:640px;}
+  .app::before{content:''; position:absolute; top:-120px; left:50%; transform:translateX(-50%); width:340px; height:240px;
+       border-radius:50%; background:var(--glow); opacity:0.14; filter:blur(50px); transition:background .6s; pointer-events:none;}
+  @media (max-width:500px){
+    body{padding:0;}
+    .app{border-radius:0; border:none; min-height:100vh; min-height:100dvh;
+         padding:calc(18px + env(safe-area-inset-top)) 18px 0;}
+  }
+
+  header{display:flex; align-items:center; justify-content:space-between; position:relative; z-index:1;}
+  .wordmark{font-family:var(--display); font-weight:700; font-size:1.05rem; letter-spacing:0.14em;}
+  .wordmark span{color:var(--amber);}
+  .head-right{display:flex; align-items:center; gap:12px;}
+  .clock{font-family:var(--mono); font-size:.72rem; color:var(--muted); text-align:right; line-height:1.3;}
+  .gear{width:34px; height:34px; border-radius:50%; background:var(--card); border:1px solid var(--line); color:var(--muted);
+        display:flex; align-items:center; justify-content:center; font-size:.95rem;}
+  .gear:hover{color:var(--paper);}
+
+  .mode-chip{margin-top:14px; display:inline-flex; align-items:center; gap:7px; background:var(--card); border:1px solid var(--line);
+       padding:7px 12px; border-radius:100px; font-family:var(--mono); font-size:.68rem; color:var(--muted); position:relative; z-index:1;}
+  .mode-dot{width:7px; height:7px; border-radius:50%; background:var(--glow);}
+
+  main{flex:1; position:relative; z-index:1; padding-bottom:18px;}
+  .greeting{font-family:var(--display); font-size:1.4rem; line-height:1.28; font-weight:500; margin:16px 0 4px;}
+  .greeting b{font-weight:700;}
+  .subline{color:var(--muted); font-size:.84rem; line-height:1.45; margin-bottom:14px; min-height:1.2em;}
+
+  .arc-wrap{margin:4px auto 2px;}
+  .arc-labels{display:flex; justify-content:space-between; font-family:var(--mono); font-size:.62rem; color:var(--muted); padding:0 6px; margin-top:-6px;}
+  .arc-path{fill:none; stroke:var(--line); stroke-width:2;}
+  .arc-progress{fill:none; stroke-width:2; stroke-linecap:round; opacity:.55;}
+  .node{cursor:pointer;}
+
+  .quick{display:flex; gap:8px; margin:16px 0 12px;}
+  .quick input{flex:1; min-width:0; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px 14px; font-size:.9rem;}
+  .quick input::placeholder{color:var(--muted);}
+  .quick button{background:var(--paper); color:var(--ink); border:none; border-radius:14px; padding:0 16px; font-family:var(--mono); font-size:.74rem; font-weight:500;}
+
+  .filters{display:flex; gap:6px; margin:0 0 12px; overflow-x:auto; padding-bottom:2px; scrollbar-width:none;}
+  .filters::-webkit-scrollbar{display:none;}
+  .chip{font-family:var(--mono); font-size:.66rem; color:var(--muted); background:var(--card); border:1px solid var(--line);
+        border-radius:100px; padding:7px 11px; white-space:nowrap;}
+  .chip[aria-pressed="true"]{color:var(--ink); background:var(--paper); border-color:var(--paper);}
+
+  .list{display:flex; flex-direction:column; gap:8px;}
+  .card{display:flex; align-items:stretch; gap:0; background:var(--card); border:1px solid var(--line); border-radius:16px; overflow:hidden;
+        transition:transform .22s, opacity .22s;}
+  .card.closing{transform:scale(.96); opacity:0;}
+  .bar{width:4px; margin:12px 0 12px 12px; border-radius:3px; flex-shrink:0;}
+  .card-main{flex:1; min-width:0; text-align:left; background:none; border:none; padding:12px 8px 12px 12px;}
+  .card-title{font-size:.9rem; font-weight:500; line-height:1.3; margin-bottom:3px; overflow-wrap:anywhere;}
+  .card-meta{font-family:var(--mono); font-size:.63rem; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; line-height:1.5;}
+  .card-meta .w{letter-spacing:.1em;}
+  .card-note{font-size:.74rem; margin-top:4px; line-height:1.35;}
+  .card-note.wait{color:var(--rose);}
+  .card-note.quiet{color:var(--clay);}
+  .card-note.nx{color:var(--muted);}
+  .tick{width:52px; flex-shrink:0; background:none; border:none; border-left:1px solid var(--line); color:var(--muted); font-size:1rem;}
+  .tick:hover{color:var(--mint); background:rgba(111,191,158,.07);}
+  .tick.done{color:var(--mint); border-left-color:transparent; cursor:default;}
+
+  .empty{color:var(--muted); font-size:.84rem; line-height:1.5; padding:22px 6px; text-align:center;}
+  .foot{display:flex; justify-content:space-between; margin-top:16px; font-family:var(--mono); font-size:.66rem; color:var(--muted);}
+  .foot b{color:var(--mint); font-weight:500;}
+
+  /* Month */
+  h2{font-family:var(--display); font-size:1.4rem; font-weight:500; margin:18px 0 4px;}
+  .kicker{font-family:var(--mono); font-size:.64rem; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin:22px 0 8px;}
+  .pct-row{display:flex; align-items:baseline; gap:10px; margin-top:14px;}
+  .pct{font-family:var(--display); font-weight:700; font-size:3rem; line-height:1; letter-spacing:-0.02em;}
+  .pct small{font-size:1.2rem; font-weight:500; color:var(--muted);}
+  .pct-cap{font-size:.8rem; color:var(--muted); line-height:1.4;}
+  .track{position:relative; height:10px; background:var(--card-2); border-radius:10px; margin:16px 0 8px;}
+  .track-fill{position:absolute; left:0; top:0; bottom:0; border-radius:10px; background:var(--mint); transition:width .5s;}
+  .track-mark{position:absolute; top:-4px; bottom:-4px; width:2px; background:var(--ink); }
+  .ladder{display:flex; flex-direction:column; gap:6px; margin-top:14px;}
+  .rung{display:flex; align-items:center; gap:12px; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:11px 14px;}
+  .rung-pct{font-family:var(--mono); font-size:.72rem; color:var(--muted); width:38px; flex-shrink:0;}
+  .rung-name{flex:1; font-size:.88rem; min-width:0; overflow-wrap:anywhere;}
+  .rung-name.unset{color:var(--muted); font-style:italic;}
+  .rung-state{font-family:var(--mono); font-size:.62rem; text-transform:uppercase; letter-spacing:.05em; color:var(--muted);}
+  .rung.hit{border-color:rgba(111,191,158,.45);}
+  .rung.hit .rung-state{color:var(--mint);}
+  .row{display:flex; align-items:center; gap:10px; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:10px 12px 10px 14px;}
+  .row-body{flex:1; min-width:0;}
+  .row-title{font-size:.86rem; overflow-wrap:anywhere;}
+  .row-meta{font-family:var(--mono); font-size:.62rem; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; margin-top:2px;}
+  .mini{background:var(--card-2); border:1px solid var(--line); border-radius:100px; padding:7px 12px; font-family:var(--mono); font-size:.66rem; color:var(--paper); white-space:nowrap;}
+  .mini:hover{border-color:rgba(255,255,255,.25);}
+  .btn{display:block; width:100%; background:var(--paper); color:var(--ink); border:none; border-radius:12px; padding:12px; font-family:var(--mono); font-size:.74rem; font-weight:500; text-align:center;}
+  .btn.ghost{background:var(--card); color:var(--paper); border:1px solid var(--line);}
+  .btn.danger{background:transparent; color:var(--clay); border:1px solid rgba(201,123,99,.4);}
+  .btn-row{display:flex; gap:8px; margin-top:12px;}
+  .note{font-size:.78rem; color:var(--muted); line-height:1.5; margin:8px 0 0;}
+  .insight{background:var(--card); border:1px solid var(--line); border-left:3px solid var(--amber); border-radius:12px; padding:12px 14px; font-size:.84rem; line-height:1.45; margin-top:12px;}
+
+  /* Tabs */
+  nav.tabs{position:sticky; bottom:0; z-index:5; display:flex; background:var(--ink); border-top:1px solid var(--line);
+           margin:0 -20px; padding:0 8px env(safe-area-inset-bottom);}
+  nav.tabs button{flex:1; background:none; border:none; padding:15px 4px 14px; font-family:var(--mono); font-size:.68rem; color:var(--muted);
+           text-transform:uppercase; letter-spacing:.08em; position:relative;}
+  nav.tabs button[aria-current="page"]{color:var(--paper);}
+  nav.tabs button[aria-current="page"]::before{content:''; position:absolute; top:-1px; left:30%; right:30%; height:2px; background:var(--glow);}
+
+  /* Sheets */
+  dialog{border:none; padding:0; color:var(--paper); background:var(--card); width:100%; max-width:460px; max-height:88vh; max-height:88dvh;
+         border-radius:24px 24px 0 0; margin:auto auto 0; overflow:auto; overscroll-behavior:contain;}
+  dialog::backdrop{background:rgba(5,6,10,.7);}
+  @media (min-width:501px){ dialog{border-radius:24px; margin:auto;} }
+  .sheet{padding:18px 20px calc(22px + env(safe-area-inset-bottom));}
+  .sheet-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;}
+  .sheet-head h3{font-family:var(--display); font-size:1.05rem; font-weight:500; margin:0;}
+  .x{width:34px; height:34px; border-radius:50%; background:var(--card-2); border:1px solid var(--line); color:var(--muted);}
+  label.f{display:block; font-family:var(--mono); font-size:.62rem; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; margin:14px 0 6px;}
+  .in{width:100%; background:var(--card-2); border:1px solid var(--line); border-radius:12px; padding:11px 12px; font-size:.9rem;}
+  textarea.in{min-height:76px; resize:vertical; line-height:1.45;}
+  .title-in{font-family:var(--display); font-size:1.1rem; font-weight:500;}
+  .seg{display:flex; gap:6px; flex-wrap:wrap;}
+  .seg button{flex:1; min-width:70px; background:var(--card-2); border:1px solid var(--line); border-radius:10px; padding:10px 6px; font-family:var(--mono); font-size:.66rem; color:var(--muted);}
+  .seg button[aria-pressed="true"]{color:var(--ink); border-color:transparent; background:var(--paper);}
+  .two{display:flex; gap:10px;}
+  .two > div{flex:1; min-width:0;}
+  .steps{display:flex; flex-direction:column; gap:6px;}
+  .step{display:flex; align-items:center; gap:10px; background:var(--card-2); border:1px solid var(--line); border-radius:12px; padding:9px 8px 9px 12px;}
+  .step input[type=checkbox]{width:18px; height:18px; accent-color:var(--mint); flex-shrink:0;}
+  .step span{flex:1; font-size:.86rem; overflow-wrap:anywhere;}
+  .step.done span{color:var(--muted); text-decoration:line-through;}
+  .step button{background:none; border:none; color:var(--muted); width:30px; height:30px;}
+  .step-add{display:flex; gap:8px; margin-top:6px;}
+  .hint{font-size:.8rem; color:var(--clay); line-height:1.45; margin:0 0 8px;}
+  .closed-box{background:var(--card-2); border:1px solid var(--line); border-radius:12px; padding:12px 14px; font-size:.86rem; line-height:1.5;}
+  details{margin-top:16px;}
+  summary{font-family:var(--mono); font-size:.64rem; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; cursor:pointer;}
+  .hist{list-style:none; margin:10px 0 0; padding:0; font-size:.78rem; color:var(--muted); line-height:1.7;}
+  .hist time{font-family:var(--mono); font-size:.68rem; margin-right:8px;}
+  .reason{display:flex; flex-direction:column; gap:8px;}
+  .reason button{text-align:left; background:var(--card-2); border:1px solid var(--line); border-radius:14px; padding:13px 14px;}
+  .reason button b{display:block; font-weight:500; font-size:.92rem;}
+  .reason button span{display:block; font-size:.76rem; color:var(--muted); margin-top:2px; line-height:1.4;}
+  .reason button:hover{border-color:rgba(255,255,255,.28);}
+  .tier-edit{display:flex; gap:8px; margin-bottom:8px; align-items:center;}
+  .tier-edit .in.p{width:78px; flex-shrink:0; font-family:var(--mono);}
+
+  .burst{position:fixed; pointer-events:none; z-index:50;}
+  .burst i{position:absolute; width:5px; height:5px; border-radius:50%; background:var(--mint); animation:burstOut .6s ease-out forwards;}
+  @keyframes burstOut{to{transform:translate(var(--dx),var(--dy)) scale(0); opacity:0;}}
+  @media (prefers-reduced-motion: reduce){
+    .card,.track-fill,.app::before{transition:none;}
+    .burst{display:none;}
+  }
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+  <header>
+    <div class="wordmark">LOOP<span>·</span></div>
+    <div class="head-right">
+      <div class="clock" id="clock"></div>
+      <button class="gear" data-act="data" aria-label="Backup and settings">⚙</button>
+    </div>
+  </header>
+  <div><button class="mode-chip" data-act="mode" aria-label="Change mode"><span class="mode-dot"></span><span id="modeLabel"></span></button></div>
+
+  <main id="view"></main>
+
+  <nav class="tabs" aria-label="Sections">
+    <button data-tab="loops">Loops</button>
+    <button data-tab="month">Month</button>
+    <button data-tab="receipts">Receipts</button>
+  </nav>
+</div>
+
+<dialog id="sheet" aria-label="Details"></dialog>
+
+<script>
+(function(){
+'use strict';
+
+/* ---------- constants ---------- */
+var KEY = 'loop.v1';
+var STAGES = ['opened','active','waiting','stuck'];
+var LABEL = {opened:'Simmering', active:'Active', waiting:'Waiting on', stuck:'Stuck', closed:'Closed'};
+var COLOR = {opened:'var(--violet)', active:'var(--amber)', waiting:'var(--rose)', stuck:'var(--clay)', closed:'var(--mint)'};
+var REASON = {completed:'Completed', decided:'Decided not to', superseded:'Superseded'};
+var WEIGHT = {1:'Low', 2:'Medium', 3:'High'};
+var MODES = [{name:'Deep focus', color:'#E3A857'}, {name:'Available', color:'#8C93D6'}, {name:'Recovering', color:'#C97B63'}];
+var QUIET_DAYS = 7;
+var DAY = 86400000;
+
+/* ---------- state ---------- */
+var state = {v:1, loops:[], tiers:[{pct:25,reward:''},{pct:50,reward:''},{pct:75,reward:''},{pct:100,reward:''}], months:{}, mode:0};
+var ui = {tab:'loops', filter:'all', sheet:null, id:null};
+var storageOK = true;
+
+function load(){
+  try{
+    var raw = localStorage.getItem(KEY);
+    if(raw){ adopt(JSON.parse(raw)); }
+  }catch(e){ storageOK = false; }
+}
+function adopt(d){
+  if(!d || !Array.isArray(d.loops)) throw new Error('Not a Loop backup');
+  state.loops = d.loops.map(normalise);
+  if(Array.isArray(d.tiers) && d.tiers.length) state.tiers = d.tiers.map(function(t){ return {pct:clamp(+t.pct||0,1,100), reward:String(t.reward||'')}; });
+  state.months = (d.months && typeof d.months==='object') ? d.months : {};
+  state.mode = (+d.mode||0) % MODES.length;
+}
+function normalise(l){
+  return {
+    id: String(l.id || uid()), title: String(l.title||'Untitled'),
+    stage: (STAGES.indexOf(l.stage)>-1 || l.stage==='closed') ? l.stage : 'active',
+    weight: clamp(+l.weight||2,1,3), time: l.time||'', est: +l.est||0, actual: +l.actual||0,
+    waitingOn: String(l.waitingOn||''), notes: String(l.notes||''),
+    steps: Array.isArray(l.steps) ? l.steps.map(function(s){ return {id:String(s.id||uid()), text:String(s.text||''), done:!!s.done}; }) : [],
+    commit: (l.commit && l.commit.month) ? {month:String(l.commit.month), weight:clamp(+l.commit.weight||2,1,3)} : null,
+    closedReason: l.closedReason||'', createdAt: +l.createdAt||Date.now(), closedAt: +l.closedAt||0,
+    history: Array.isArray(l.history) ? l.history.map(function(h){ return {t:+h.t||Date.now(), text:String(h.text||'')}; }) : []
+  };
+}
+function save(){
+  try{ localStorage.setItem(KEY, JSON.stringify(state)); storageOK = true; }
+  catch(e){ storageOK = false; }
+}
+
+/* ---------- helpers ---------- */
+function uid(){ return (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'l'+Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
+function clamp(n,a,b){ return Math.min(b, Math.max(a,n)); }
+function esc(s){ return String(s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function byId(id){ for(var i=0;i<state.loops.length;i++) if(state.loops[i].id===id) return state.loops[i]; return null; }
+function log(l, text){ l.history.push({t:Date.now(), text:text}); }
+function touched(l){ return l.history.length ? l.history[l.history.length-1].t : l.createdAt; }
+function daysSince(ts){ return Math.floor((Date.now()-ts)/DAY); }
+function sameDay(ts){ var a=new Date(ts), b=new Date(); return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate(); }
+function ymOf(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+function curYM(){ return ymOf(new Date()); }
+var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+function monthName(ym){ var p=ym.split('-'); return MONTHS[+p[1]-1]+' '+p[0]; }
+function fmtTime(hhmm){ if(!hhmm) return ''; var p=hhmm.split(':'), h=+p[0], m=p[1]; var ap=h>=12?'pm':'am'; h=h%12||12; return h+':'+m+ap; }
+function fmtMin(m){ if(!m) return ''; if(m<60) return m+' min'; var h=Math.floor(m/60), r=m%60; return h+'h'+(r?' '+r+'m':''); }
+function fmtStamp(ts){ var d=new Date(ts); return d.getDate()+' '+MONTHS[d.getMonth()].slice(0,3)+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+function dots(w){ return '●●●'.slice(0,w)+'○○○'.slice(0,3-w); }
+function nextStep(l){ for(var i=0;i<l.steps.length;i++) if(!l.steps[i].done) return l.steps[i]; return null; }
+function median(a){ var s=a.slice().sort(function(x,y){return x-y;}), m=Math.floor(s.length/2); return s.length%2 ? s[m] : (s[m-1]+s[m])/2; }
+
+/* ---------- actions ---------- */
+function addLoop(title){
+  var l = normalise({title:title, stage:'active', weight:2, createdAt:Date.now()});
+  log(l, 'Opened as Active');
+  state.loops.push(l); save(); return l;
+}
+function setStage(l, stage){
+  if(l.stage===stage) return;
+  log(l, LABEL[l.stage]+' → '+LABEL[stage]);
+  l.stage = stage; save();
+}
+function closeLoop(l, reason, actual){
+  log(l, LABEL[l.stage]+' → Closed ('+REASON[reason].toLowerCase()+')');
+  l.stage='closed'; l.closedReason=reason; l.closedAt=Date.now();
+  if(actual>0) l.actual=actual;
+  save();
+}
+function reopen(l){
+  log(l, 'Reopened as Active');
+  l.stage='active'; l.closedReason=''; l.closedAt=0; save();
+}
+function monthLocked(ym){ return !!(state.months[ym] && state.months[ym].locked); }
+function monthInfo(ym){
+  var set = state.loops.filter(function(l){ return l.commit && l.commit.month===ym; });
+  var num=0, den=0;
+  set.forEach(function(l){
+    var neutral = l.stage==='closed' && l.closedReason!=='completed';
+    if(neutral) return;
+    den += l.commit.weight;
+    if(l.stage==='closed') num += l.commit.weight;
+  });
+  return {set:set, num:num, den:den, pct: den ? Math.floor(num/den*100) : 0};
+}
+
+/* ---------- render: shell ---------- */
+var view = document.getElementById('view');
+var sheet = document.getElementById('sheet');
+var app = document.getElementById('app');
+
+function renderClock(){
+  var d=new Date(), days=['SUN','MON','TUE','WED','THU','FRI','SAT'];
+  document.getElementById('clock').innerHTML = days[d.getDay()]+' '+d.getDate()+' '+MONTHS[d.getMonth()].slice(0,3).toUpperCase()+'<br>'+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+}
+function renderMode(){
+  var m = MODES[state.mode];
+  app.style.setProperty('--glow', m.color);
+  document.getElementById('modeLabel').textContent = m.name;
+}
+function render(){
+  renderClock(); renderMode();
+  var tabs = document.querySelectorAll('nav.tabs button');
+  for(var i=0;i<tabs.length;i++){
+    if(tabs[i].dataset.tab===ui.tab) tabs[i].setAttribute('aria-current','page'); else tabs[i].removeAttribute('aria-current');
+  }
+  view.innerHTML = ui.tab==='month' ? monthHTML() : ui.tab==='receipts' ? receiptsHTML() : loopsHTML();
+}
+
+/* ---------- render: loops ---------- */
+function greeting(){
+  var open = state.loops.filter(function(l){return l.stage!=='closed';});
+  var stuck = open.filter(function(l){return l.stage==='stuck';});
+  var waiting = open.filter(function(l){return l.stage==='waiting';});
+  var closedToday = state.loops.filter(function(l){return l.stage==='closed' && sameDay(l.closedAt);}).length;
+  var h = new Date().getHours(), word = h<12?'Morning':h<17?'Afternoon':'Evening';
+  var g = word+'. ', sub='';
+  if(!state.loops.length){
+    g += '<b>Nothing here yet.</b>';
+    sub = 'Add the first thing that is sitting open in your head. Anything unfinished counts.';
+  } else if(!open.length){
+    g += '<b>Nothing open.</b>';
+    sub = closedToday ? closedToday+' closed today. You can stop here.' : 'Every loop is closed.';
+  } else {
+    g += '<b>'+open.length+' loop'+(open.length===1?'':'s')+' open</b>';
+    if(stuck.length) g += ', '+stuck.length+' stuck';
+    if(waiting.length) g += ', '+waiting.length+' waiting on someone else';
+    g += '.';
+    var quiet = open.filter(function(l){return daysSince(touched(l))>=QUIET_DAYS;}).sort(function(a,b){return touched(a)-touched(b);})[0];
+    if(stuck.length){
+      var s = stuck[0], ns = nextStep(s);
+      sub = ns ? '“'+esc(s.title)+'” is stuck. Its next step is small: '+esc(ns.text)+'.' : '“'+esc(s.title)+'” is stuck. Open it and name the next ten minutes of it.';
+    } else if(quiet){
+      var n = daysSince(touched(quiet));
+      sub = quiet.stage==='waiting'
+        ? '“'+esc(quiet.title)+'” has been waiting '+n+' days. Follow up, or close it?'
+        : '“'+esc(quiet.title)+'” has been quiet for '+n+' days. Still yours, or close it by decision?';
+    } else if(closedToday){
+      sub = closedToday+' closed today.';
+    } else {
+      var act = open.filter(function(l){return l.stage==='active';}).length;
+      sub = act ? act+' active thread'+(act===1?'':'s')+' in motion.' : 'Nothing active. Pick one to move.';
+    }
+  }
+  return '<div class="greeting">'+g+'</div><div class="subline">'+sub+'</div>';
+}
+function arcHTML(){
+  var R=150, S=6, E=23;
+  function ang(t){ var c=clamp(t,S,E); return 180-((c-S)/(E-S))*180; }
+  function xy(a){ var r=a*Math.PI/180; return {x:200+R*Math.cos(r), y:172-R*Math.sin(r)}; }
+  var a=xy(180), b=xy(0), d=new Date(), now=d.getHours()+d.getMinutes()/60, n=xy(ang(now)), col=MODES[state.mode].color;
+  var h = '<path class="arc-path" d="M'+a.x+','+a.y+' A'+R+','+R+' 0 0 1 '+b.x+','+b.y+'"/>';
+  h += '<path class="arc-progress" stroke="'+col+'" d="M'+a.x+','+a.y+' A'+R+','+R+' 0 0 1 '+n.x.toFixed(1)+','+n.y.toFixed(1)+'"/>';
+  h += '<line x1="'+n.x.toFixed(1)+'" y1="'+(n.y-10).toFixed(1)+'" x2="'+n.x.toFixed(1)+'" y2="'+(n.y+10).toFixed(1)+'" stroke="'+col+'" stroke-width="2"/>';
+  state.loops.forEach(function(l){
+    if(l.stage==='closed' || !l.time) return;
+    var p=l.time.split(':'), pt=xy(ang(+p[0]+(+p[1])/60));
+    h += '<g class="node" data-act="open" data-id="'+esc(l.id)+'" role="button" tabindex="0" aria-label="'+esc(l.title)+'"><circle cx="'+pt.x.toFixed(1)+'" cy="'+pt.y.toFixed(1)+'" r="16" fill="transparent"/><circle cx="'+pt.x.toFixed(1)+'" cy="'+pt.y.toFixed(1)+'" r="'+(4+l.weight)+'" fill="'+COLOR[l.stage]+'" stroke="var(--ink)" stroke-width="2"/></g>';
+  });
+  return '<div class="arc-wrap"><svg viewBox="0 0 400 190" width="100%" role="img" aria-label="Today, 6am to 11pm">'+h+'</svg><div class="arc-labels"><span>6a</span><span>12p</span><span>6p</span><span>11p</span></div></div>';
+}
+function cardHTML(l){
+  var closed = l.stage==='closed';
+  var meta = [closed ? REASON[l.closedReason]||'Closed' : LABEL[l.stage]];
+  if(!closed && l.time) meta.push(fmtTime(l.time));
+  if(l.est) meta.push(fmtMin(l.est));
+  meta.push('<span class="w" aria-label="Importance '+WEIGHT[l.weight]+'">'+dots(l.weight)+'</span>');
+  if(l.commit && l.commit.month===curYM()) meta.push('This month');
+  var notes='';
+  if(!closed){
+    if(l.stage==='waiting' && l.waitingOn) notes += '<div class="card-note wait">Waiting on: '+esc(l.waitingOn)+'</div>';
+    var ns = nextStep(l);
+    if(ns) notes += '<div class="card-note nx">Next: '+esc(ns.text)+'</div>';
+    var q = daysSince(touched(l));
+    if(q>=QUIET_DAYS) notes += '<div class="card-note quiet">Quiet for '+q+' days</div>';
+  }
+  return '<article class="card" data-id="'+esc(l.id)+'"><span class="bar" style="background:'+COLOR[l.stage]+'"></span>'
+    + '<button class="card-main" data-act="open" data-id="'+esc(l.id)+'"><div class="card-title">'+esc(l.title)+'</div><div class="card-meta">'+meta.join(' · ')+'</div>'+notes+'</button>'
+    + (closed ? '<span class="tick done" aria-hidden="true" style="display:flex;align-items:center;justify-content:center">✓</span>'
+              : '<button class="tick" data-act="close" data-id="'+esc(l.id)+'" aria-label="Close this loop">✓</button>')
+    + '</article>';
+}
+function loopsHTML(){
+  var order = {stuck:0, active:1, waiting:2, opened:3, closed:4};
+  var items = state.loops.slice().sort(function(a,b){
+    if(order[a.stage]!==order[b.stage]) return order[a.stage]-order[b.stage];
+    if(a.stage==='closed') return b.closedAt-a.closedAt;
+    if(b.weight!==a.weight) return b.weight-a.weight;
+    return (a.time||'99')<(b.time||'99') ? -1 : 1;
+  });
+  if(ui.filter==='all') items = items.filter(function(l){ return l.stage!=='closed' || sameDay(l.closedAt); });
+  else items = items.filter(function(l){ return l.stage===ui.filter; });
+  var filters = [['all','All'],['active','Active'],['waiting','Waiting on'],['stuck','Stuck'],['opened','Simmering'],['closed','Closed']];
+  var closedToday = state.loops.filter(function(l){return l.stage==='closed' && sameDay(l.closedAt);}).length;
+  var emptyMsg = !state.loops.length ? 'No loops yet. Type one above.' : ui.filter==='all' ? 'Nothing open right now.' : 'Nothing in “'+LABEL[ui.filter]+'”.';
+  return greeting() + arcHTML()
+    + '<form class="quick" data-form="quick"><input name="title" type="text" placeholder="New loop…" aria-label="New loop" autocomplete="off" enterkeyhint="done"><button type="submit">Add</button></form>'
+    + '<div class="filters">'+filters.map(function(f){ return '<button class="chip" data-act="filter" data-f="'+f[0]+'" aria-pressed="'+(ui.filter===f[0])+'">'+f[1]+'</button>'; }).join('')+'</div>'
+    + '<div class="list">'+(items.map(cardHTML).join('') || '<div class="empty">'+emptyMsg+'</div>')+'</div>'
+    + '<div class="foot"><span><b>'+closedToday+'</b> closed today</span><span>'+(storageOK?'saved on this device':'not saving: storage blocked')+'</span></div>';
+}
+
+/* ---------- render: month ---------- */
+function monthHTML(){
+  var ym=curYM(), info=monthInfo(ym), locked=monthLocked(ym);
+  var tiers = state.tiers.slice().sort(function(a,b){return a.pct-b.pct;});
+  var h = '<h2>'+monthName(ym)+'</h2>';
+  if(!info.set.length){
+    h += '<p class="note">Pick the loops that matter this month and weight them. Closing them by completion moves the bar; the bar unlocks the rewards you set.</p>';
+  } else {
+    h += '<div class="pct-row"><div class="pct">'+info.pct+'<small>%</small></div><div class="pct-cap">'+info.num+' of '+info.den+' weighted points closed'+(locked?'':'<br>Set not locked yet')+'</div></div>';
+  }
+  h += '<div class="track" aria-hidden="true"><div class="track-fill" style="width:'+info.pct+'%"></div>'+tiers.filter(function(t){return t.pct<100;}).map(function(t){ return '<div class="track-mark" style="left:'+t.pct+'%"></div>'; }).join('')+'</div>';
+  h += '<div class="ladder">'+tiers.map(function(t){
+    var hit = info.den>0 && info.pct>=t.pct;
+    return '<div class="rung'+(hit?' hit':'')+'"><span class="rung-pct">'+t.pct+'%</span><span class="rung-name'+(t.reward?'':' unset')+'">'+(t.reward?esc(t.reward):'No reward set')+'</span><span class="rung-state">'+(hit?'Unlocked':'Locked')+'</span></div>';
+  }).join('')+'</div>';
+  h += '<div class="btn-row"><button class="btn ghost" data-act="tiers">Edit rewards</button></div>';
+
+  h += '<div class="kicker">Committed this month</div>';
+  if(info.set.length){
+    h += '<div class="list">'+info.set.map(function(l){
+      var st = l.stage==='closed' ? REASON[l.closedReason] + (l.closedReason==='completed'?'':' · not counted') : LABEL[l.stage];
+      return '<div class="row"><span class="bar" style="background:'+((l.stage==='closed' && l.closedReason!=='completed')?'var(--muted)':COLOR[l.stage])+';margin:0;align-self:stretch"></span><button class="row-body card-main" style="padding:0" data-act="open" data-id="'+esc(l.id)+'"><div class="row-title">'+esc(l.title)+'</div><div class="row-meta">'+st+' · weight '+l.commit.weight+'</div></button>'
+        + (locked ? '' : '<button class="mini" data-act="uncommit" data-id="'+esc(l.id)+'">Remove</button>')+'</div>';
+    }).join('')+'</div>';
+  } else {
+    h += '<div class="empty">Nothing committed yet.</div>';
+  }
+  if(!locked){
+    var pool = state.loops.filter(function(l){ return l.stage!=='closed' && !(l.commit && l.commit.month===ym); });
+    if(pool.length){
+      h += '<div class="kicker">Add from open loops</div><div class="list">'+pool.map(function(l){
+        return '<div class="row"><div class="row-body"><div class="row-title">'+esc(l.title)+'</div><div class="row-meta">'+LABEL[l.stage]+' · weight '+l.weight+'</div></div><button class="mini" data-act="commit" data-id="'+esc(l.id)+'">Commit</button></div>';
+      }).join('')+'</div>';
+    }
+    if(info.set.length){
+      h += '<div class="btn-row"><button class="btn" data-act="lock">Lock this month’s set</button></div><p class="note">Locking freezes the set and its weights until the month ends, so the percentage cannot be nudged by adding easy loops or dropping hard ones.</p>';
+    }
+  } else {
+    h += '<p class="note">Set locked. Loops you add from now on stay out of this month’s score. Closing a committed loop as “decided not to” or “superseded” removes it from the score without counting for or against you.</p>';
+  }
+  return h;
+}
+
+/* ---------- render: receipts ---------- */
+function receiptsHTML(){
+  var closed = state.loops.filter(function(l){return l.stage==='closed';}).sort(function(a,b){return b.closedAt-a.closedAt;});
+  var week = closed.filter(function(l){ return Date.now()-l.closedAt < 7*DAY; });
+  var done = week.filter(function(l){return l.closedReason==='completed';}).length;
+  var h = '<h2>Receipts</h2>';
+  if(!closed.length) return h+'<p class="note">Closed loops collect here, with how long each one was open and how it ended.</p>';
+  h += '<p class="note" style="font-size:.86rem;color:var(--paper)">Last 7 days: <b>'+week.length+'</b> closed'+(week.length ? ' ('+done+' completed, '+(week.length-done)+' let go)' : '')+'. '+closed.length+' in total.</p>';
+  var pairs = closed.filter(function(l){return l.est>0 && l.actual>0;});
+  if(pairs.length>=3){
+    var r = median(pairs.map(function(l){return l.actual/l.est;}));
+    var txt = r>1.15 ? 'Across '+pairs.length+' loops, the work took about '+r.toFixed(1)+'× your estimate. Pad the next plan by that much.'
+            : r<0.85 ? 'Across '+pairs.length+' loops, the work took about '+r.toFixed(1)+'× your estimate. You overestimate; plans can be tighter.'
+            : 'Across '+pairs.length+' loops, your estimates have been close to the real time.';
+    h += '<div class="insight">'+txt+'</div>';
+  } else {
+    h += '<p class="note">Give a loop an estimate, then enter the real time when you close it. After three, this page shows how far off your estimates run.</p>';
+  }
+  h += '<div class="kicker">Closed</div><div class="list">'+closed.map(function(l){
+    var days = Math.max(0, Math.round((l.closedAt-l.createdAt)/DAY));
+    var bits = [REASON[l.closedReason]||'Closed', days ? 'open '+days+' day'+(days===1?'':'s') : 'same day'];
+    var sd = l.steps.filter(function(s){return s.done;}).length; if(sd) bits.push(sd+' step'+(sd===1?'':'s'));
+    if(l.est && l.actual) bits.push(fmtMin(l.actual)+' vs '+fmtMin(l.est)+' est');
+    return '<div class="row"><span class="bar" style="background:'+(l.closedReason==='completed'?'var(--mint)':'var(--muted)')+';margin:0;align-self:stretch"></span><button class="row-body card-main" style="padding:0" data-act="open" data-id="'+esc(l.id)+'"><div class="row-title">'+esc(l.title)+'</div><div class="row-meta">'+bits.join(' · ')+'</div></button></div>';
+  }).join('')+'</div>';
+  return h;
+}
+
+/* ---------- sheets ---------- */
+function openSheet(kind, id){
+  ui.sheet=kind; ui.id=id||null; renderSheet();
+  if(!sheet.open) sheet.showModal();
+  sheet.scrollTop = 0;
+}
+function closeSheet(){ if(sheet.open) sheet.close(); }
+sheet.addEventListener('close', function(){ ui.sheet=null; ui.id=null; sheet.innerHTML=''; render(); });
+sheet.addEventListener('click', function(e){ if(e.target===sheet) closeSheet(); });
+
+function head(title){ return '<div class="sheet-head"><h3>'+title+'</h3><button class="x" data-act="x" aria-label="Close">✕</button></div>'; }
+function renderSheet(){
+  var l = ui.id ? byId(ui.id) : null;
+  var h = '';
+  if(ui.sheet==='loop' && l) h = loopSheet(l);
+  else if(ui.sheet==='close' && l) h = closeSheetHTML(l);
+  else if(ui.sheet==='tiers') h = tiersSheet();
+  else if(ui.sheet==='data') h = dataSheet();
+  sheet.innerHTML = '<div class="sheet">'+h+'</div>';
+}
+function loopSheet(l){
+  var closed = l.stage==='closed', ym=curYM(), locked=monthLocked(ym), inMonth = l.commit && l.commit.month===ym;
+  var h = head(closed?'Closed loop':'Loop');
+  h += '<input class="in title-in" data-field="title" value="'+esc(l.title)+'" aria-label="Title">';
+  if(closed){
+    h += '<label class="f">Outcome</label><div class="closed-box">'+REASON[l.closedReason]+' on '+fmtStamp(l.closedAt)+(l.actual?'<br>Took '+fmtMin(l.actual)+(l.est?' against an estimate of '+fmtMin(l.est):''):'')+'</div>';
+  } else {
+    h += '<label class="f">Stage</label><div class="seg">'+STAGES.map(function(s){ return '<button data-act="stage" data-s="'+s+'" aria-pressed="'+(l.stage===s)+'">'+LABEL[s]+'</button>'; }).join('')+'</div>';
+    if(l.stage==='waiting') h += '<label class="f" for="fw">Waiting on whom or what</label><input id="fw" class="in" data-field="waitingOn" value="'+esc(l.waitingOn)+'" placeholder="A person, a reply, a date">';
+  }
+  h += '<label class="f">Importance</label><div class="seg">'+[1,2,3].map(function(w){ return '<button data-act="weight" data-w="'+w+'" aria-pressed="'+(l.weight===w)+'">'+WEIGHT[w]+'</button>'; }).join('')+'</div>';
+  if(inMonth && locked && l.commit.weight!==l.weight) h += '<p class="note">This month’s score still uses weight '+l.commit.weight+', frozen when the set was locked.</p>';
+  if(!closed){
+    h += '<div class="two"><div><label class="f" for="ft">Time today</label><input id="ft" class="in" type="time" data-field="time" value="'+esc(l.time)+'"></div><div><label class="f" for="fe">Estimate (min)</label><input id="fe" class="in" type="number" min="0" step="5" inputmode="numeric" data-field="est" value="'+(l.est||'')+'" placeholder="45"></div></div>';
+  }
+  h += '<label class="f">Next steps</label>';
+  if(!closed && l.stage==='stuck' && !nextStep(l)) h += '<p class="hint">Stuck usually means the next move is too big or too vague. Name the next ten minutes of this.</p>';
+  h += '<div class="steps">'+l.steps.map(function(s){
+    return '<div class="step'+(s.done?' done':'')+'"><input type="checkbox" data-step="'+esc(s.id)+'"'+(s.done?' checked':'')+' aria-label="'+esc(s.text)+'"><span>'+esc(s.text)+'</span><button data-act="delstep" data-sid="'+esc(s.id)+'" aria-label="Remove step">✕</button></div>';
+  }).join('')+'</div>';
+  if(!closed) h += '<form class="step-add" data-form="step"><input class="in" name="text" placeholder="A smaller step…" aria-label="New step" autocomplete="off" enterkeyhint="done"><button class="mini" type="submit">Add</button></form>';
+  h += '<label class="f" for="fn">Notes</label><textarea id="fn" class="in" data-field="notes">'+esc(l.notes)+'</textarea>';
+  if(!closed){
+    h += '<label class="f">'+monthName(ym)+'</label>';
+    if(locked) h += '<p class="note" style="margin:0">'+(inMonth?'Committed. The set is locked.':'This month’s set is locked, so this loop stays out of the score.')+'</p>';
+    else h += '<button class="btn ghost" data-act="'+(inMonth?'uncommit':'commit')+'" data-id="'+esc(l.id)+'">'+(inMonth?'Remove from this month':'Commit to this month')+'</button>';
+  }
+  h += '<details><summary>History ('+l.history.length+')</summary><ul class="hist">'+l.history.slice().reverse().map(function(x){ return '<li><time>'+fmtStamp(x.t)+'</time>'+esc(x.text)+'</li>'; }).join('')+'</ul></details>';
+  h += '<div class="btn-row">'+(closed ? '<button class="btn" data-act="reopen">Reopen</button>' : '<button class="btn" data-act="close" data-id="'+esc(l.id)+'">Close this loop</button>')+'</div>';
+  h += '<div class="btn-row"><button class="btn danger" data-act="delete">Delete</button></div>';
+  return h;
+}
+function closeSheetHTML(l){
+  var h = head('Close “'+esc(l.title)+'”');
+  h += '<div class="reason">'
+    + '<button data-act="reason" data-r="completed"><b>Completed</b><span>It is done.</span></button>'
+    + '<button data-act="reason" data-r="decided"><b>Decided not to</b><span>A choice, not a failure. It leaves this month’s score without counting against you.</span></button>'
+    + '<button data-act="reason" data-r="superseded"><b>Superseded</b><span>Something else replaced it or made it irrelevant.</span></button>'
+    + '</div>';
+  h += '<label class="f" for="fa">Minutes it really took (optional)</label><input id="fa" class="in" type="number" min="0" step="5" inputmode="numeric" placeholder="'+(l.est?'You estimated '+l.est:'Leave blank if unsure')+'">';
+  return h;
+}
+function tiersSheet(){
+  var h = head('Rewards');
+  h += '<p class="note" style="margin:0 0 14px">Each row is a share of this month’s weighted loops and what reaching it earns you.</p>';
+  h += state.tiers.map(function(t,i){
+    return '<div class="tier-edit"><input class="in p" type="number" min="1" max="100" inputmode="numeric" data-tier="'+i+'" data-k="pct" value="'+t.pct+'" aria-label="Percent for reward '+(i+1)+'"><input class="in" data-tier="'+i+'" data-k="reward" value="'+esc(t.reward)+'" placeholder="Reward" aria-label="Reward '+(i+1)+'"></div>';
+  }).join('');
+  h += '<div class="btn-row"><button class="btn" data-act="x">Done</button></div>';
+  return h;
+}
+function dataSheet(){
+  var h = head('Backup and data');
+  h += '<p class="note" style="margin:0">Your loops live only in this browser on this device. Nothing is sent anywhere, and nothing syncs. Export a backup now and then, and use it to move to another device.</p>';
+  h += '<div class="btn-row"><button class="btn" data-act="export">Export backup</button></div>';
+  h += '<div class="btn-row"><button class="btn ghost" data-act="import">Import backup</button></div><input type="file" id="file" accept="application/json,.json" hidden>';
+  h += '<p class="note">'+state.loops.length+' loop'+(state.loops.length===1?'':'s')+' stored'+(storageOK?'.':'. Storage is blocked in this browser, so changes will not survive a reload.')+'</p>';
+  h += '<div class="btn-row"><button class="btn danger" data-act="wipe">Erase everything</button></div>';
+  return h;
+}
+
+/* ---------- events ---------- */
+function burst(el){
+  var r = el.getBoundingClientRect(), c = document.createElement('div');
+  c.className='burst'; c.style.left=(r.left+r.width/2)+'px'; c.style.top=(r.top+r.height/2)+'px';
+  for(var i=0;i<10;i++){ var d=document.createElement('i'); d.style.setProperty('--dx',((Math.random()-0.5)*70)+'px'); d.style.setProperty('--dy',((Math.random()-0.9)*70)+'px'); c.appendChild(d); }
+  document.body.appendChild(c); setTimeout(function(){ c.remove(); }, 650);
+}
+function commit(l){ l.commit={month:curYM(), weight:l.weight}; log(l,'Committed to '+monthName(curYM())); save(); }
+function uncommit(l){ l.commit=null; log(l,'Removed from '+monthName(curYM())); save(); }
+function refresh(){ if(ui.sheet) renderSheet(); render(); }
+
+document.addEventListener('click', function(e){
+  var tab = e.target.closest('[data-tab]');
+  if(tab){ ui.tab=tab.dataset.tab; render(); window.scrollTo(0,0); return; }
+  var el = e.target.closest('[data-act]'); if(!el) return;
+  var act = el.dataset.act, l = byId(el.dataset.id || ui.id);
+  switch(act){
+    case 'mode': state.mode=(state.mode+1)%MODES.length; save(); render(); break;
+    case 'filter': ui.filter=el.dataset.f; render(); break;
+    case 'open': if(l) openSheet('loop', l.id); break;
+    case 'close': if(l) openSheet('close', l.id); break;
+    case 'x': closeSheet(); break;
+    case 'stage': if(l){ setStage(l, el.dataset.s); refresh(); } break;
+    case 'weight': if(l){
+        l.weight=+el.dataset.w;
+        if(l.commit && !monthLocked(l.commit.month)) l.commit.weight=l.weight;
+        save(); refresh();
+      } break;
+    case 'reason': if(l){
+        var fa=document.getElementById('fa'), actual = fa ? Math.max(0, parseInt(fa.value,10)||0) : 0, reason=el.dataset.r;
+        closeLoop(l, reason, actual);
+        if(reason==='completed') burst(el);
+        closeSheet();
+      } break;
+    case 'reopen': if(l){ reopen(l); refresh(); } break;
+    case 'delete': if(l && confirm('Delete “'+l.title+'” and its history? This cannot be undone.')){
+        state.loops = state.loops.filter(function(x){return x.id!==l.id;}); save(); closeSheet();
+      } break;
+    case 'delstep': if(l){ l.steps=l.steps.filter(function(s){return s.id!==el.dataset.sid;}); save(); refresh(); } break;
+    case 'commit': if(l && !monthLocked(curYM())){ commit(l); refresh(); } break;
+    case 'uncommit': if(l && !monthLocked(curYM())){ uncommit(l); refresh(); } break;
+    case 'lock': if(confirm('Lock the set for '+monthName(curYM())+'? You will not be able to add or remove loops, or change their weights, until next month.')){
+        state.months[curYM()]={locked:true, at:Date.now()}; save(); render();
+      } break;
+    case 'tiers': openSheet('tiers'); break;
+    case 'data': openSheet('data'); break;
+    case 'export': exportData(); break;
+    case 'import': document.getElementById('file').click(); break;
+    case 'wipe': if(confirm('Erase every loop and reward on this device? Export a backup first if you might want them back.')){
+        state.loops=[]; state.months={}; state.tiers.forEach(function(t){t.reward='';}); save(); closeSheet();
+      } break;
+  }
+});
+document.addEventListener('keydown', function(e){
+  if((e.key==='Enter'||e.key===' ') && e.target.classList && e.target.classList.contains('node')){ e.preventDefault(); e.target.dispatchEvent(new MouseEvent('click',{bubbles:true})); }
+});
+document.addEventListener('submit', function(e){
+  var f = e.target.closest('[data-form]'); if(!f) return;
+  e.preventDefault();
+  if(f.dataset.form==='quick'){
+    var t = f.title.value.trim(); if(!t) return;
+    addLoop(t); ui.filter='all'; render();
+    var q = view.querySelector('.quick input'); if(q) q.focus();
+  } else if(f.dataset.form==='step'){
+    var l = byId(ui.id), s = f.text.value.trim(); if(!l || !s) return;
+    l.steps.push({id:uid(), text:s, done:false}); log(l,'Step added: '+s); save(); renderSheet();
+    var n = sheet.querySelector('.step-add input'); if(n) n.focus();
+  }
+});
+document.addEventListener('input', function(e){
+  var t = e.target;
+  if(t.dataset.field){
+    var l = byId(ui.id); if(!l) return;
+    var k = t.dataset.field;
+    l[k] = k==='est' ? Math.max(0, parseInt(t.value,10)||0) : t.value;
+    if(k==='title' && !l.title.trim()) l.title='Untitled';
+    save();
+  } else if(t.dataset.tier!==undefined){
+    var tier = state.tiers[+t.dataset.tier]; if(!tier) return;
+    if(t.dataset.k==='pct') tier.pct = clamp(parseInt(t.value,10)||1,1,100); else tier.reward = t.value;
+    save();
+  }
+});
+document.addEventListener('change', function(e){
+  var t = e.target;
+  if(t.dataset.step){
+    var l = byId(ui.id); if(!l) return;
+    var s = l.steps.filter(function(x){return x.id===t.dataset.step;})[0]; if(!s) return;
+    s.done = t.checked; log(l, (s.done?'Step done: ':'Step reopened: ')+s.text); save(); renderSheet();
+  } else if(t.id==='file' && t.files && t.files[0]){
+    var r = new FileReader();
+    r.onload = function(){
+      try{
+        var d = JSON.parse(r.result);
+        if(!d || !Array.isArray(d.loops)) throw new Error('bad');
+        if(confirm('Replace what is on this device with the '+d.loops.length+' loops in this backup?')){ adopt(d); save(); closeSheet(); }
+      }catch(err){ alert('That file is not a Loop backup.'); }
+    };
+    r.readAsText(t.files[0]);
+  }
+});
+function exportData(){
+  var d = new Date(), name = 'loop-backup-'+ymOf(d)+'-'+String(d.getDate()).padStart(2,'0')+'.json';
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(state,null,2)], {type:'application/json'}));
+  a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); }, 2000);
+}
+
+/* ---------- start ---------- */
+load();
+render();
+setInterval(function(){ if(!ui.sheet && ui.tab==='loops' && document.activeElement.tagName!=='INPUT') render(); else renderClock(); }, 60000);
+document.addEventListener('visibilitychange', function(){ if(!document.hidden && !ui.sheet && document.activeElement.tagName!=='INPUT') render(); });
+
+if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
+  window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
+}
+})();
+</script>
+</body>
+</html>
